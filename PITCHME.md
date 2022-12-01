@@ -15,10 +15,6 @@ _paginate: false
 
 ---
 
-![bg contain](assets/img/overview.png)
-
----
-
 # Background
 
 - 1.5~ years ago I wrote a few object detection pipelines
@@ -42,15 +38,16 @@ _paginate: false
 - TPU compatibility
 - Train time COCO metric evaluation
 - Native support for ragged bounding box inputs
-- bounding box enabled augmentations
+- Easy, composable bounding box augmentations
 
 ---
 
 # API Highlights
 
-- explicit bounding box formats
-- highly modular
-- ragged native preprocessing and augmentation layers
+- Explicit bounding box formats
+- Highly modular
+- Ragged native preprocessing and augmentation layers
+- Readable implementations
 
 ---
 
@@ -73,7 +70,13 @@ shear = layers.RandomShear(
 
 ---
 
-![bg left]()
+#### This is consistent across all KerasCV object detection components!
+
+---
+
+![bg left contain](assets/img/augmentation.png)
+
+##### Assembling an Augmentation Pipeline
 
 ```python
 # images are ragged
@@ -88,7 +91,93 @@ augmenter = [
   ),
   layers.MixUp()
 ]
+
+inputs = {
+  "images": images,
+  "bounding_boxes": boxes
+}
+augmenter(inputs)
 ```
+
+---
+
+##### Constructing a Model
+
+```python
+model = keras_cv.models.RetinaNet(
+    # number of classes to be used in box classification
+    classes=20,
+    # For more info on supported bounding box formats, visit
+    # https://keras.io/api/keras_cv/bounding_box/
+    bounding_box_format="xywh",
+    # KerasCV offers a set of pre-configured backbones
+    backbone="resnet50",
+    # Each backbone comes with multiple pre-trained weights
+    # These weights match the weights available in the `keras_cv.model` class.
+    backbone_weights="imagenet",
+    # include_rescaling tells the model whether your input images are in the default
+    # pixel range (0, 255) or if you have already rescaled your inputs to the range
+    # (0, 1).  In our case, we feed our model images with inputs in the range (0, 255).
+    include_rescaling=True,
+)
+# Fine-tuning a RetinaNet is as simple as setting backbone.trainable = False
+model.backbone.trainable = False
+```
+
+---
+
+##### Create Metrics
+
+```python
+metrics = [
+    keras_cv.metrics.COCOMeanAveragePrecision(
+        class_ids=range(20),
+        bounding_box_format="xywh",
+        name="Mean Average Precision",
+    ),
+    keras_cv.metrics.COCORecall(
+        class_ids=range(20),
+        bounding_box_format="xywh",
+        max_detections=100,
+        name="Recall",
+    ),
+]
+```
+
+---
+
+##### Compile your model
+
+```python
+model.compile(
+    classification_loss='focal',
+    box_loss='smooth_l1',
+    optimizer=tf.optimizers.SGD(global_clipnorm=10.0),
+    metrics=metrics,
+)
+```
+
+---
+
+## Model Saving
+
+```python
+model.save_weights('my-weights.h5')
+# Or
+model.save('my-model.saved_model/')
+```
+---
+
+## Inference
+
+```python
+model.load_weights('my-weights.h5')
+y_pred = model.predict(images)
+```
+
+---
+
+![bg contain](assets/img/overview.png)
 
 ---
 
