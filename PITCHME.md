@@ -165,6 +165,10 @@ model.compile(
 model.save_weights('my-weights.h5')
 # Or
 model.save('my-model.saved_model/')
+# Or
+model.save('my-weights.h5')
+# Or
+callbacks.ModelCheckpoint('my-weights.h5', save_weights_only=True)
 ```
 ---
 
